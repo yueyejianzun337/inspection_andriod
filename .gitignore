@@ -12,3 +12,22 @@ app/release/
 *.apk
 *.aab
 *.ap_
+
+# 日誌
+*.log
+
+# OS 縮圖快取
+Thumbs.db
+
+# Java heap dump
+*.hprof
+
+# Gradle wrapper jar（使用 gradle wrapper 自動下載）
+gradle/wrapper/gradle-wrapper.jar
+
+# lint 輸出
+lint-output/
+
+# 本地 keystore
+*.jks
+*.keystore

@@ -24,6 +24,7 @@ import java.util.*
 @Composable
 fun QueryScreen(
     onNavigateToDetail: (Int) -> Unit,
+    onNavigateToReview: ((Int) -> Unit)? = null,
     onBack: () -> Unit,
     viewModel: QueryViewModel = viewModel()
 ) {
@@ -90,7 +91,13 @@ fun QueryScreen(
                                 record = record,
                                 onClick = {
                                     val id = record["id"] as? Int ?: return@RecordCard
-                                    onNavigateToDetail(id)
+                                    val reviewStatus = record["review_status"] as? String
+                                    val currentRole = initData?.get("current_user_role") as? String ?: ""
+                                    if (reviewStatus == "pending" && currentRole in listOf("user", "admin")) {
+                                        onNavigateToReview?.let { it(id) }
+                                    } else {
+                                        onNavigateToDetail(id)
+                                    }
                                 }
                             )
                         }

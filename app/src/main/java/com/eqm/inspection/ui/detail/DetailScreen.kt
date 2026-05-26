@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,17 +31,46 @@ import com.eqm.inspection.ui.components.*
 @Composable
 fun DetailScreen(
     recordId: Int,
+    role: String = "",
     onBack: () -> Unit,
+    onNavigateToReview: ((Int) -> Unit)? = null,
     viewModel: DetailViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(recordId) {
         viewModel.loadDetail(recordId)
     }
 
+    // 監聽審核成功
+    LaunchedEffect(uiState.reviewSuccess) {
+        uiState.reviewSuccess?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short)
+            viewModel.clearMessages()
+        }
+    }
+
+    // 監聽刪除成功
+    LaunchedEffect(uiState.deleteSuccess) {
+        if (uiState.deleteSuccess) {
+            snackbarHostState.showSnackbar("刪除成功", duration = SnackbarDuration.Short)
+            viewModel.clearMessages()
+            onBack()
+        }
+    }
+
+    // 監聽錯誤
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
                 title = "巡檢詳情",
@@ -79,9 +109,91 @@ fun DetailScreen(
                     items(uiState.stationGroups) { group ->
                         StationGroupCard(group)
                     }
+
+                    // 審核/刪除按鈕（非 vendor 角色）
+                    if (role != "vendor") {
+                        uiState.record?.let { record ->
+                            val reviewStatus = record["review_status"] as? String
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    if (role in listOf("user", "admin") && reviewStatus == "pending") {
+                                        Button(
+                                            onClick = {
+                                                onNavigateToReview?.let { it(recordId) }
+                                            },
+                                            enabled = !uiState.isReviewing,
+                                            modifier = Modifier.weight(1f),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFF4CAF50)
+                                            )
+                                        ) {
+                                            if (uiState.isReviewing) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    color = Color.White,
+                                                    strokeWidth = 2.dp
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+                                            Text("確認審核")
+                                        }
+                                    }
+                                    if (role == "admin") {
+                                        OutlinedButton(
+                                            onClick = { showDeleteDialog = true },
+                                            enabled = !uiState.isDeleting,
+                                            modifier = Modifier.weight(1f),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = Color.Red
+                                            )
+                                        ) {
+                                            if (uiState.isDeleting) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+                                            Icon(Icons.Default.Delete, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("刪除記錄")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // 刪除確認對話框
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("確認刪除") },
+            text = { Text("確定要刪除此記錄嗎？此操作不可恢復。") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteRecord(recordId)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("刪除")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 

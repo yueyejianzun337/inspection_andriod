@@ -13,7 +13,11 @@ data class DetailUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val record: Map<String, Any>? = null,
-    val stationGroups: List<StationGroupUi> = emptyList()
+    val stationGroups: List<StationGroupUi> = emptyList(),
+    val isReviewing: Boolean = false,
+    val isDeleting: Boolean = false,
+    val reviewSuccess: String? = null,
+    val deleteSuccess: Boolean = false
 )
 
 data class StationGroupUi(
@@ -41,6 +45,14 @@ class DetailViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState
+
+    fun clearMessages() {
+        _uiState.value = _uiState.value.copy(
+            error = null,
+            reviewSuccess = null,
+            deleteSuccess = false
+        )
+    }
 
     fun loadDetail(recordId: Int) {
         viewModelScope.launch {
@@ -109,6 +121,74 @@ class DetailViewModel : ViewModel() {
                 _uiState.value = DetailUiState(
                     isLoading = false,
                     error = "网络错误: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
+    fun reviewRecord(recordId: Int, status: String = "confirmed") {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isReviewing = true, error = null, reviewSuccess = null)
+            try {
+                val response = ApiClient.apiService.reviewRecord(recordId, mapOf("status" to status))
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null && body.success) {
+                        _uiState.value = _uiState.value.copy(
+                            isReviewing = false,
+                            reviewSuccess = "審核成功"
+                        )
+                        // 審核成功後刷新詳情
+                        loadDetail(recordId)
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isReviewing = false,
+                            error = body?.message ?: "審核失敗"
+                        )
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isReviewing = false,
+                        error = "審核失敗 (${response.code()})"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isReviewing = false,
+                    error = "網絡錯誤: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
+    fun deleteRecord(recordId: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isDeleting = true, error = null, deleteSuccess = false)
+            try {
+                val response = ApiClient.apiService.deleteRecord(recordId)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null && body.success) {
+                        _uiState.value = _uiState.value.copy(
+                            isDeleting = false,
+                            deleteSuccess = true
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isDeleting = false,
+                            error = body?.message ?: "刪除失敗"
+                        )
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
+                        error = "刪除失敗 (${response.code()})"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isDeleting = false,
+                    error = "網絡錯誤: ${e.localizedMessage}"
                 )
             }
         }

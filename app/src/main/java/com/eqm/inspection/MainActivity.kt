@@ -117,15 +117,16 @@ fun MainScreen(
         // 仪表板
         composable(Routes.DASHBOARD) {
             DashboardScreen(
-                onNavigateToInspection = {
-                    navController.navigate(Routes.INSPECTION)
-                },
+                role = role,
+                onNavigateToInspection = if (role in listOf("vendor", "admin")) {
+                    { navController.navigate(Routes.INSPECTION) }
+                } else null,
                 onNavigateToQuery = {
                     navController.navigate(Routes.QUERY)
                 },
-                onNavigateToDrafts = {
-                    navController.navigate(Routes.DRAFTS)
-                },
+                onNavigateToDrafts = if (role in listOf("vendor", "admin")) {
+                    { navController.navigate(Routes.DRAFTS) }
+                } else null,
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS)
                 },
@@ -166,6 +167,9 @@ fun MainScreen(
                 onNavigateToDetail = { recordId ->
                     navController.navigate(Routes.detail(recordId))
                 },
+                onNavigateToReview = { recordId ->
+                    navController.navigate(Routes.reviewEdit(recordId))
+                },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -180,7 +184,33 @@ fun MainScreen(
             val recordId = backStackEntry.arguments?.getInt("recordId") ?: return@composable
             DetailScreen(
                 recordId = recordId,
-                onBack = { navController.popBackStack() }
+                role = role,
+                onBack = { navController.popBackStack() },
+                onNavigateToReview = { id ->
+                    navController.navigate(Routes.reviewEdit(id))
+                }
+            )
+        }
+
+        // 审核（编辑后确认）
+        composable(
+            route = Routes.REVIEW_INSPECTION,
+            arguments = listOf(
+                navArgument("recordId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val recordId = backStackEntry.arguments?.getInt("recordId") ?: return@composable
+            InspectionScreen(
+                reviewRecordId = recordId,
+                onBack = { navController.popBackStack() },
+                onSubmitted = { id ->
+                    navController.navigate(Routes.detail(id)) {
+                        popUpTo(Routes.DASHBOARD)
+                    }
+                },
+                onDraftSaved = {
+                    navController.popBackStack()
+                }
             )
         }
 

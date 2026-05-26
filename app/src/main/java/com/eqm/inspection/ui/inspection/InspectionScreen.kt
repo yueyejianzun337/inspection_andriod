@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ import java.util.*
 @Composable
 fun InspectionScreen(
     draftId: Int? = null,
+    reviewRecordId: Int? = null,
     onBack: () -> Unit,
     onSubmitted: (recordId: Int) -> Unit,
     onDraftSaved: () -> Unit,
@@ -146,6 +148,13 @@ fun InspectionScreen(
         }
     }
 
+    // 加载审核数据
+    LaunchedEffect(reviewRecordId) {
+        if (reviewRecordId != null && reviewRecordId > 0) {
+            viewModel.loadReviewData(reviewRecordId)
+        }
+    }
+
     // 处理成功
     LaunchedEffect(uiState.successMessage) {
         if (uiState.successMessage != null && uiState.submittedRecordId != null) {
@@ -202,7 +211,11 @@ fun InspectionScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = if (draftId != null) "編輯草稿" else "廠商巡檢填寫",
+                title = when {
+                    reviewRecordId != null -> "審核記錄"
+                    draftId != null -> "編輯草稿"
+                    else -> "廠商巡檢填寫"
+                },
                 onBack = onBack
             )
         },
@@ -487,17 +500,26 @@ fun InspectionScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            OutlinedButton(
-                                onClick = { viewModel.submit(isDraft = true) },
-                                modifier = Modifier.weight(1f),
-                                enabled = !uiState.isSubmitting && uiState.inspectionItems.isNotEmpty()
-                            ) {
-                                Text("暫存")
+                            if (!uiState.isReviewMode) {
+                                OutlinedButton(
+                                    onClick = { viewModel.submit(isDraft = true) },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !uiState.isSubmitting && uiState.inspectionItems.isNotEmpty()
+                                ) {
+                                    Text("暫存")
+                                }
                             }
+                            val submitLabel = if (uiState.isReviewMode) "確認審核" else "提交"
+                            val submitColor = if (uiState.isReviewMode) Color(0xFF4CAF50) else null
                             Button(
                                 onClick = { viewModel.submit(isDraft = false) },
                                 modifier = Modifier.weight(1f),
-                                enabled = !uiState.isSubmitting && uiState.inspectionItems.isNotEmpty()
+                                enabled = !uiState.isSubmitting && uiState.inspectionItems.isNotEmpty(),
+                                colors = if (submitColor != null) {
+                                    ButtonDefaults.buttonColors(containerColor = submitColor)
+                                } else {
+                                    ButtonDefaults.buttonColors()
+                                }
                             ) {
                                 if (uiState.isSubmitting) {
                                     CircularProgressIndicator(
@@ -506,7 +528,7 @@ fun InspectionScreen(
                                         strokeWidth = 2.dp
                                     )
                                 } else {
-                                    Text("提交")
+                                    Text(submitLabel)
                                 }
                             }
                         }

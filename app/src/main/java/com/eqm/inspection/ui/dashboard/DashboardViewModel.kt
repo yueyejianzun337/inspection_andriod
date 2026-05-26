@@ -22,10 +22,6 @@ class DashboardViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
 
-    init {
-        loadDashboard()
-    }
-
     fun loadDashboard() {
         viewModelScope.launch {
             _uiState.value = DashboardUiState(isLoading = true)

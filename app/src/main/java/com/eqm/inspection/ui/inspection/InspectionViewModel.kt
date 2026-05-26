@@ -61,7 +61,10 @@ data class InspectionUiState(
     // Inspection items
     val inspectionItems: List<FillItem> = emptyList(),
     val isDraft: Boolean = false,
-    val draftId: Int? = null
+    val draftId: Int? = null,
+    // Review mode
+    val isReviewMode: Boolean = false,
+    val reviewRecordId: Int? = null
 )
 
 class InspectionViewModel : ViewModel() {
@@ -101,7 +104,7 @@ class InspectionViewModel : ViewModel() {
                             if (vendorMfrId != null) {
                                 newForm = newForm.copy(manufacturerId = vendorMfrId)
                                 // 加载该厂商的产线
-                                loadProductionLines(vendorMfrId)
+                                fetchProductionLines(vendorMfrId)
                             }
                             newForm
                         }
@@ -131,18 +134,23 @@ class InspectionViewModel : ViewModel() {
         }
     }
 
+    private suspend fun fetchProductionLines(manufacturerId: Int): List<IdNamePair> {
+        return try {
+            val response = ApiClient.apiService.getProductionLines(manufacturerId)
+            if (response.isSuccessful) {
+                val lines = response.body() ?: emptyList()
+                _uiState.value = _uiState.value.copy(
+                    form = _uiState.value.form.copy(manufacturerId = manufacturerId),
+                    productionLines = lines
+                )
+                lines
+            } else emptyList()
+        } catch (_: Exception) { emptyList() }
+    }
+
     fun loadProductionLines(manufacturerId: Int) {
         viewModelScope.launch {
-            try {
-                val response = ApiClient.apiService.getProductionLines(manufacturerId)
-                if (response.isSuccessful) {
-                    val lines = response.body() ?: emptyList()
-                    _uiState.value = _uiState.value.copy(
-                        form = _uiState.value.form.copy(manufacturerId = manufacturerId),
-                        productionLines = lines
-                    )
-                }
-            } catch (_: Exception) {}
+            fetchProductionLines(manufacturerId)
         }
     }
 
@@ -314,7 +322,7 @@ class InspectionViewModel : ViewModel() {
                         // 设置厂商（如果有）
                         if (record.manufacturerId != null) {
                             form = form.copy(manufacturerId = record.manufacturerId)
-                            loadProductionLines(record.manufacturerId)
+                            fetchProductionLines(record.manufacturerId)
                         }
                         if (record.modelId != null) {
                             form = form.copy(modelId = record.modelId)
@@ -341,6 +349,74 @@ class InspectionViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = "加载草稿失败 (${response.code()})"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "网络错误: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
+    fun loadReviewData(recordId: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                isReviewMode = true,
+                reviewRecordId = recordId
+            )
+            try {
+                val response = ApiClient.apiService.getReviewData(recordId)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null && body.success && body.data != null) {
+                        val data = body.data
+                        val record = data.draftRecord
+
+                        // 构建草稿结果映射
+                        draftResultMap = data.draftResults.associateBy { it.itemId ?: "" }
+
+                        // 回填表单
+                        var form = InspectionFormData(
+                            inspectionDate = record.inspectionDate ?: "",
+                            reviewerId = record.reviewerId,
+                            selectedTestStationIds = parseTestStationIds(record.testStationId),
+                            inspectorName = record.inspectorName ?: ""
+                        )
+
+                        // 设置厂商（如果有）
+                        if (record.manufacturerId != null) {
+                            form = form.copy(manufacturerId = record.manufacturerId)
+                            fetchProductionLines(record.manufacturerId)
+                        }
+                        if (record.modelId != null) {
+                            form = form.copy(modelId = record.modelId)
+                        }
+                        if (record.productionLineId != null) {
+                            form = form.copy(productionLineId = record.productionLineId)
+                        }
+
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            form = form,
+                            isDraft = false,
+                            draftId = recordId  // 审核提交时作为 draft_id 使用
+                        )
+
+                        // 加载巡检项目（回填数据会在加载后自动应用）
+                        loadInspectionItems()
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = body?.error ?: "加载审核数据失败"
+                        )
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "加载审核数据失败 (${response.code()})"
                     )
                 }
             } catch (e: Exception) {
@@ -591,6 +667,7 @@ class InspectionViewModel : ViewModel() {
             manufacturerId = form.manufacturerId,
             draftId = state.draftId,
             inspectorName = form.inspectorName,
+            isReviewConfirm = state.isReviewMode,
             items = state.inspectionItems.map { item ->
                 SubmitItem(
                     itemId = item.itemId,

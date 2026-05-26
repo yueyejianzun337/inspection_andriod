@@ -96,6 +96,12 @@ interface ApiService {
         @Path("draftId") draftId: Int
     ): Response<ApiResponse<DraftDataResponse>>
 
+    // ===== 审核数据（已提交记录的编辑数据） =====
+    @GET("api/vendor/review_data/{recordId}")
+    suspend fun getReviewData(
+        @Path("recordId") recordId: Int
+    ): Response<ApiResponse<DraftDataResponse>>
+
     // ===== 删除草稿 =====
     @POST("api/vendor/delete_draft/{draftId}")
     suspend fun deleteDraft(

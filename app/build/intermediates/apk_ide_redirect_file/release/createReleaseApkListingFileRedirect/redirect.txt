@@ -1,2 +1,0 @@
-#- File Locator -
-listingFile=../../../../../../../Android_APK/release/output-metadata.json

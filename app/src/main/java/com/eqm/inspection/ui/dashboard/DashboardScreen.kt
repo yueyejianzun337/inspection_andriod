@@ -25,6 +25,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eqm.inspection.ui.components.*
@@ -33,14 +36,29 @@ import com.eqm.inspection.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    onNavigateToInspection: () -> Unit,
+    role: String = "",
+    onNavigateToInspection: (() -> Unit)? = null,
     onNavigateToQuery: () -> Unit,
-    onNavigateToDrafts: () -> Unit,
+    onNavigateToDrafts: (() -> Unit)? = null,
     onNavigateToSettings: () -> Unit,
     onNavigateToDetail: (Int) -> Unit,
     viewModel: DashboardViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 每次畫面顯示時自動刷新
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadDashboard()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -55,6 +73,7 @@ fun DashboardScreen(
         },
         bottomBar = {
             BottomNavBar(
+                role = role,
                 selected = 0,
                 onInspection = onNavigateToInspection,
                 onQuery = onNavigateToQuery,
@@ -323,12 +342,15 @@ private fun FailRecordCard(
 
 @Composable
 private fun BottomNavBar(
+    role: String = "",
     selected: Int,
-    onInspection: () -> Unit,
+    onInspection: (() -> Unit)?,
     onQuery: () -> Unit,
-    onDrafts: () -> Unit,
+    onDrafts: (() -> Unit)?,
     onSettings: () -> Unit
 ) {
+    val showFullTabs = role in listOf("vendor", "admin")
+
     NavigationBar {
         NavigationBarItem(
             selected = selected == 0,
@@ -336,26 +358,30 @@ private fun BottomNavBar(
             icon = { Icon(Icons.Default.Home, contentDescription = null) },
             label = { Text("首頁") }
         )
+        if (showFullTabs) {
+            NavigationBarItem(
+                selected = selected == 1,
+                onClick = onInspection ?: {},
+                icon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                label = { Text("填寫") }
+            )
+        }
         NavigationBarItem(
-            selected = selected == 1,
-            onClick = onInspection,
-            icon = { Icon(Icons.Default.Edit, contentDescription = null) },
-            label = { Text("填寫") }
-        )
-        NavigationBarItem(
-            selected = selected == 2,
+            selected = if (showFullTabs) selected == 2 else selected == 1,
             onClick = onQuery,
             icon = { Icon(Icons.Default.Search, contentDescription = null) },
             label = { Text("查詢") }
         )
+        if (showFullTabs) {
+            NavigationBarItem(
+                selected = selected == 3,
+                onClick = onDrafts ?: {},
+                icon = { Icon(Icons.Default.Save, contentDescription = null) },
+                label = { Text("暫存") }
+            )
+        }
         NavigationBarItem(
-            selected = selected == 3,
-            onClick = onDrafts,
-            icon = { Icon(Icons.Default.Save, contentDescription = null) },
-            label = { Text("暫存") }
-        )
-        NavigationBarItem(
-            selected = selected == 4,
+            selected = if (showFullTabs) selected == 4 else selected == 2,
             onClick = onSettings,
             icon = { Icon(Icons.Default.Settings, contentDescription = null) },
             label = { Text("設置") }

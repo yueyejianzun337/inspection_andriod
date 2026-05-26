@@ -125,6 +125,7 @@ data class SubmitRequest(
     @SerializedName("manufacturer_id") val manufacturerId: Int? = null,
     @SerializedName("draft_id") val draftId: Int? = null,
     @SerializedName("inspector_name") val inspectorName: String = "",
+    @SerializedName("is_review_confirm") val isReviewConfirm: Boolean = false,
     val items: List<SubmitItem>
 )
 

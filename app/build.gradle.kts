@@ -11,8 +11,8 @@ android {
         applicationId = "com.eqm.inspection"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0.0"
+        versionCode = 2
+        versionName = "1.0.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -51,7 +51,7 @@ android {
     // APK 輸出文件名
     applicationVariants.configureEach {
         outputs.configureEach {
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "inspection_1.0.0.0.apk"
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "inspection_${defaultConfig.versionName}.apk"
         }
     }
 }
