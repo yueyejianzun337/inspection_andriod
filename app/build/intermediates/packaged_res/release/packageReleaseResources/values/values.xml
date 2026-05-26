@@ -7,6 +7,6 @@
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
     <color name="white">#FFFFFFFF</color>
-    <string name="app_name">厂商巡检</string>
+    <string name="app_name">巡检系统</string>
     <style name="Theme.VendorInspectionApp" parent="android:Theme.Material.Light.NoActionBar"/>
 </resources>

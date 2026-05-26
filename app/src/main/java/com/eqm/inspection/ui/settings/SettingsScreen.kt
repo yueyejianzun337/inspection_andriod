@@ -25,6 +25,7 @@ fun SettingsScreen(
     settingsDataStore: SettingsDataStore,
     username: String,
     role: String,
+    onNavigateToAbout: () -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
     viewModel: SettingsViewModel = viewModel(
@@ -131,7 +132,17 @@ fun SettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
+            
+            // 關於
+            OutlinedButton(
+                onClick = onNavigateToAbout,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("關於")
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
             // 退出登录
             OutlinedButton(
                 onClick = onLogout,

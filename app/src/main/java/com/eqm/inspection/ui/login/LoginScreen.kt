@@ -74,14 +74,14 @@ fun LoginScreen(
         ) {
             // 标题
             Text(
-                text = "廠商巡檢系統",
+                text = "巡檢系統",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Vendor Inspection System",
+                text = "Inspection System",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

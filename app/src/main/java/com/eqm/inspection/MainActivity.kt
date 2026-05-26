@@ -14,6 +14,7 @@ import androidx.navigation.navArgument
 import com.eqm.inspection.data.SettingsDataStore
 import com.eqm.inspection.data.api.ApiClient
 import com.eqm.inspection.data.api.TokenManager
+import com.eqm.inspection.ui.about.AboutScreen
 import com.eqm.inspection.ui.dashboard.DashboardScreen
 import com.eqm.inspection.ui.detail.DetailScreen
 import com.eqm.inspection.ui.draft.DraftListScreen
@@ -199,6 +200,7 @@ fun MainScreen(
                 settingsDataStore = settingsDataStore,
                 username = username,
                 role = role,
+                onNavigateToAbout = { navController.navigate(Routes.ABOUT) },
                 onLogout = {
                     scope.launch {
                         tokenManager.clear()
@@ -208,6 +210,20 @@ fun MainScreen(
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 關於
+        composable(Routes.ABOUT) {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val versionName = try {
+                ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "1.0"
+            } catch (e: Exception) {
+                "1.0"
+            }
+            AboutScreen(
+                versionName = versionName,
                 onBack = { navController.popBackStack() }
             )
         }

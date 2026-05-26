@@ -8,6 +8,7 @@ object Routes {
     const val DETAIL = "detail/{recordId}"
     const val DRAFTS = "drafts"
     const val SETTINGS = "settings"
+    const val ABOUT = "about"
 
     fun inspectionEdit(draftId: Int) = "inspection?draftId=$draftId"
     fun detail(recordId: Int) = "detail/$recordId"
